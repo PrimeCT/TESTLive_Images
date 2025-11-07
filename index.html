@@ -128,6 +128,27 @@ const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4PyEg3JWk2spDw
 
 let allCards = [];
 
+// Function to extract Google Drive file ID from any type of link
+function extractDriveId(url) {
+  if (!url) return null;
+  let id = null;
+  const patterns = [
+    /\/d\/([-\w]{25,})/,       // /d/FILE_ID/
+    /id=([-\w]{25,})/,         // id=FILE_ID
+    /open\?id=([-\w]{25,})/,   // open?id=FILE_ID
+    /\/uc\?id=([-\w]{25,})/,   // /uc?id=FILE_ID
+    /[-\w]{25,}/               // fallback: any 25+ character ID
+  ];
+  for (const p of patterns) {
+    const match = url.match(p);
+    if (match && match[1]) {
+      id = match[1];
+      break;
+    }
+  }
+  return id;
+}
+
 fetch(csvUrl)
   .then(r => r.text())
   .then(csv => {
@@ -148,9 +169,10 @@ fetch(csvUrl)
 
       if (status !== "available") return;
 
-      // Extract file ID from Google Drive link
-      let fileIdMatch = rawUrl.match(/[-\w]{25,}/);
-      const photoUrl = fileIdMatch ? `${proxyBase}?id=${fileIdMatch[0]}` : 'https://placehold.co/300x180?text=No+Photo';
+      const fileId = extractDriveId(rawUrl);
+      const photoUrl = fileId
+        ? `${proxyBase}?id=${fileId}`
+        : 'https://placehold.co/300x180?text=No+Photo';
 
       const reserveLink = `<a href="mailto:sales@primecountertops.net?subject=Reserve%20${id}&body=Hi,%0A%0AI%27m%20interested%20in%20this%20remnant:%0A%0AID:%20${id}%0AMaterial:%20${material}%0AColor:%20${color}%0ASize:%20${length}%22%20x%20${width}%22%0A%0AThank%20you!">Reserve Now</a>`;
 
