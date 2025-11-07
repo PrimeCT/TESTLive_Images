@@ -165,3 +165,84 @@
     let match = url.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
     if (match) return match[1];
     match = url.match(/open\\?id=([a-zA-Z0-9_-]{25,})/);
+    if (match) return match[1];
+    match = url.match(/id=([a-zA-Z0-9_-]{25,})/);
+    if (match) return match[1];
+    match = url.match(/([a-zA-Z0-9_-]{25,})/);
+    return match ? match[1] : null;
+  }
+
+  fetch(csvUrl)
+    .then(res => res.text())
+    .then(csv => {
+      const rows = csv.trim().split(/\r?\n/).map(r => r.split(","));
+      const header = rows[0].map(h => h.trim().toLowerCase());
+      const grid = document.getElementById("grid");
+      let out = "";
+
+      rows.slice(1).forEach(row => {
+        const rowObj = {};
+        header.forEach((h, i) => rowObj[h] = (row[i] || "").trim());
+        if (!rowObj.status || rowObj.status.toLowerCase() !== "available") return;
+
+        const id = rowObj["id"];
+        const material = rowObj["material"];
+        const color = rowObj["color"];
+        const length = rowObj["lenght"]; // note: typo in CSV
+        const width = rowObj["width"];
+        const area = rowObj["usable area (sq/ft)"];
+        const rawUrl = rowObj["google link"];
+
+        const fileId = extractDriveId(rawUrl);
+        const photoUrl = fileId ? `${proxyBase}?id=${fileId}` : "https://placehold.co/300x180?text=No+Image";
+
+        const cardHtml = `
+          <div class="card" onclick="openLightbox('${photoUrl}')">
+            <img src="${photoUrl}" alt="${color}" onerror="this.src='https://placehold.co/300x180?text=No+Photo';">
+            <div class="info">
+              <b>${color}</b>
+              <div><strong>ID:</strong> ${id}</div>
+              <div><strong>Material:</strong> ${material}</div>
+              <div><strong>Size:</strong> ${length}" × ${width}"</div>
+              <div><strong>Usable Area:</strong> ${area} sq.ft</div>
+            </div>
+            <a href="mailto:sales@primecountertops.net?subject=Reserve%20${id}&body=Hi,%0A%0AI’m interested in this remnant:%0A%0AID:%20${id}%0AColor:%20${color}%0ASize:%20${length}%20×%20${width}%22%0A%0ACould you please provide more info?%0A%0AThank you!"
+               class="reserve-btn">Reserve Now</a>
+          </div>
+        `;
+        out += cardHtml;
+        allCards.push({ html: cardHtml, search: `${id} ${material} ${color} ${length} ${width} ${area}`.toLowerCase() });
+      });
+
+      grid.innerHTML = out || '<p class="empty">No remnants available at this time.</p>';
+    })
+    .catch(err => {
+      document.getElementById("grid").innerHTML = `<p class="empty" style="color:red;">Error loading inventory: ${err}</p>`;
+      console.error(err);
+    });
+
+  function filterCards() {
+    const query = document.getElementById("search").value.toLowerCase();
+    const grid = document.getElementById("grid");
+    let filtered = "";
+    allCards.forEach(card => {
+      if (card.search.includes(query)) filtered += card.html;
+    });
+    grid.innerHTML = filtered || '<p class="empty">No results found.</p>';
+  }
+
+  function openLightbox(url) {
+    const lightbox = document.getElementById("lightbox");
+    const img = document.getElementById("lightbox-img");
+    img.src = url;
+    lightbox.classList.add("active");
+  }
+  document.getElementById("lightbox").addEventListener("click", () => {
+    document.getElementById("lightbox").classList.remove("active");
+  });
+
+  setInterval(() => location.reload(), 180000);
+</script>
+
+</body>
+</html>
