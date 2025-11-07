@@ -144,8 +144,8 @@ fetch(csvUrl)
         width,       // Column F (Index 5)
         area,        // Column G (Index 6)
         status,      // Column H (Index 7)
-        driveLink,   // Column I (Index 8)
-        imageFile    // Column J (Index 9)
+        imageFile,   // Column I (Index 8)
+        
       ] = row.map(x => x.trim());
 
       if (status.toLowerCase() !== 'available') return;
