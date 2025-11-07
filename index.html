@@ -6,95 +6,24 @@
   <title>Prime Countertops - Remnant Live Inventory</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600" rel="stylesheet">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'Inter',system-ui,sans-serif; background:#f8f9fa; color:#1a1a1a; line-height:1.5; }
-    header { background:#000000; color:#ffd700; padding:32px 20px; text-align:center; }
-    header h1 { font-size:28px; font-weight:600; margin:0; }
+    body { font-family:'Inter',system-ui,sans-serif; background:#f8f9fa; margin:0; color:#1a1a1a; }
+    header { background:#000; color:#ffd700; padding:32px 20px; text-align:center; }
+    header h1 { margin:0; font-size:28px; }
     header p { margin-top:8px; font-size:16px; opacity:0.9; }
-
-    .container { max-width:1200px; margin:0 auto; padding:20px; }
-
+    .container { max-width:1200px; margin:auto; padding:20px; }
     .search-container { text-align:center; margin-bottom:20px; }
-    .search-input {
-      padding:12px 16px;
-      width:100%;
-      max-width:400px;
-      border:1px solid #ccc;
-      border-radius:8px;
-      font-size:16px;
-    }
-
-    .remnant-grid {
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
-      gap:24px;
-    }
-
-    .card {
-      border:1px solid #e0e0e0;
-      border-radius:16px;
-      overflow:hidden;
-      background:#fff;
-      box-shadow:0 4px 12px rgba(0,0,0,0.08);
-      text-align:center;
-      transition:transform 0.2s;
-      cursor:pointer;
-    }
-
+    .search-input { padding:12px; width:100%; max-width:400px; border:1px solid #ccc; border-radius:8px; }
+    .remnant-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:24px; }
+    .card { background:#fff; border-radius:16px; box-shadow:0 4px 12px rgba(0,0,0,0.08); overflow:hidden; text-align:center; transition:transform 0.2s; }
     .card:hover { transform:translateY(-4px); }
     .card img { width:100%; height:180px; object-fit:cover; }
-
-    .card .info { padding:12px; font-size:14px; }
-    .card .info b { font-size:16px; display:block; margin-bottom:4px; }
-
-    .card a {
-      display:block;
-      margin:12px;
-      padding:10px;
-      background:#000000;
-      color:#ffd700;
-      border-radius:8px;
-      text-decoration:none;
-      font-weight:600;
-      transition:background 0.3s;
-    }
-    .card a:hover { background:#333333; }
-
-    .empty { grid-column:1/-1; text-align:center; color:#666; font-size:18px; padding:40px; }
-
-    .footer {
-      text-align:center;
-      padding:24px;
-      color:#fff;
-      font-size:14px;
-      background:#000;
-    }
+    .info { padding:12px; font-size:14px; }
+    .info b { font-size:16px; display:block; margin-bottom:4px; }
+    .card a { display:block; margin:12px; padding:10px; background:#000; color:#ffd700; border-radius:8px; text-decoration:none; font-weight:600; }
+    .card a:hover { background:#333; }
+    .empty { text-align:center; color:#666; font-size:18px; padding:40px; grid-column:1/-1; }
+    .footer { text-align:center; background:#000; color:#fff; padding:24px; }
     .footer a { color:#ffd700; text-decoration:none; }
-    .footer a:hover { text-decoration:underline; }
-
-    @media (max-width:768px) {
-      .remnant-grid { grid-template-columns:1fr; }
-    }
-
-    /* Lightbox */
-    .lightbox {
-      display:none;
-      position:fixed;
-      top:0; left:0;
-      width:100%; height:100%;
-      background:rgba(0,0,0,0.9);
-      justify-content:center;
-      align-items:center;
-      z-index:1000;
-      padding:20px;
-    }
-    .lightbox img {
-      max-width:90%;
-      max-height:90vh;
-      border-radius:12px;
-      box-shadow:0 8px 32px rgba(0,0,0,0.5);
-    }
-    .lightbox.active { display:flex; }
   </style>
 </head>
 <body>
@@ -106,10 +35,9 @@
 
 <div class="container">
   <div class="search-container">
-    <input type="text" class="search-input" id="search" placeholder="Search by ID, color, or material..." onkeyup="filterCards()">
+    <input id="search" class="search-input" type="text" placeholder="Search by ID, color, or material..." onkeyup="filterCards()">
   </div>
-
-  <div class="remnant-grid" id="grid">
+  <div id="grid" class="remnant-grid">
     <p class="empty">Loading inventory...</p>
   </div>
 </div>
@@ -118,35 +46,14 @@
   <p>Questions? Email <a href="mailto:sales@primecountertops.net">sales@primecountertops.net</a> or call (240) 887-0036</p>
 </div>
 
-<div class="lightbox" id="lightbox">
-  <img id="lightbox-img" src="" alt="Enlarged view">
-</div>
-
 <script>
-const proxyBase = "https://script.google.com/macros/s/AKfycbwM8cy9LOU0qvvKXvHzJPt99nn9__cuZ_TSmFQ6uW0Z2y7eG0pwjBClHWJ6jKRZaxVN/exec";
 const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR4PyEg3JWk2spDwAJhcD6e5qPxWf9HV4Vb9-sZs7M1_hBVgDKA8PIF4Z42wjR1LGYpxgjCDAQy1JE1/pub?gid=1308909698&output=csv";
-
 let allCards = [];
 
-// Function to extract Google Drive file ID from any type of link
 function extractDriveId(url) {
   if (!url) return null;
-  let id = null;
-  const patterns = [
-    /\/d\/([-\w]{25,})/,       // /d/FILE_ID/
-    /id=([-\w]{25,})/,         // id=FILE_ID
-    /open\?id=([-\w]{25,})/,   // open?id=FILE_ID
-    /\/uc\?id=([-\w]{25,})/,   // /uc?id=FILE_ID
-    /[-\w]{25,}/               // fallback: any 25+ character ID
-  ];
-  for (const p of patterns) {
-    const match = url.match(p);
-    if (match && match[1]) {
-      id = match[1];
-      break;
-    }
-  }
-  return id;
+  const match = url.match(/[-\w]{25,}/);
+  return match ? match[0] : null;
 }
 
 fetch(csvUrl)
@@ -154,10 +61,8 @@ fetch(csvUrl)
   .then(csv => {
     const rows = csv.split(/\r?\n/).map(r => r.split(','));
     let out = '';
-
     rows.slice(1).forEach(row => {
       if (row.length < 9) return;
-
       const id = row[0].trim();
       const material = row[1].trim();
       const color = row[2].trim();
@@ -166,70 +71,43 @@ fetch(csvUrl)
       const area = row[6].trim();
       const rawUrl = row[7].trim();
       const status = row[8].trim().toLowerCase();
-
       if (status !== "available") return;
 
       const fileId = extractDriveId(rawUrl);
       const photoUrl = fileId
-        ? `${proxyBase}?id=${fileId}`
+        ? `https://drive.google.com/uc?export=view&id=${fileId}`
         : 'https://placehold.co/300x180?text=No+Photo';
 
-      const reserveLink = `<a href="mailto:sales@primecountertops.net?subject=Reserve%20${id}&body=Hi,%0A%0AI%27m%20interested%20in%20this%20remnant:%0A%0AID:%20${id}%0AMaterial:%20${material}%0AColor:%20${color}%0ASize:%20${length}%22%20x%20${width}%22%0A%0AThank%20you!">Reserve Now</a>`;
-
-      const cardHtml = `
-        <div class="card" onclick="openLightbox('${photoUrl}')">
-          <img src="${photoUrl}" alt="${color}" onerror="this.src='https://placehold.co/300x180?text=No+Photo'; this.onerror=null;">
+      const card = `
+        <div class="card">
+          <img src="${photoUrl}" onerror="this.src='https://placehold.co/300x180?text=No+Photo';this.onerror=null;">
           <div class="info">
             <b>${color}</b>
-            <div class="desc">
-              <strong>ID:</strong> ${id}<br>
-              <strong>Material:</strong> ${material}<br>
-              <strong>Length:</strong> ${length}" &nbsp; <strong>Width:</strong> ${width}"<br>
-              <strong>Usable Area:</strong> ${area} sq.ft
-            </div>
+            <div><strong>ID:</strong> ${id}</div>
+            <div><strong>Material:</strong> ${material}</div>
+            <div><strong>Length:</strong> ${length}" × <strong>Width:</strong> ${width}"</div>
+            <div><strong>Usable Area:</strong> ${area} sq.ft</div>
           </div>
-          ${reserveLink}
+          <a href="mailto:sales@primecountertops.net?subject=Reserve%20${id}&body=Hi,%0A%0AI%27m%20interested%20in%20this%20remnant:%0A%0AID:%20${id}%0AMaterial:%20${material}%0AColor:%20${color}%0ASize:%20${length}%22%20x%20${width}%22%0A%0AThank%20you!">Reserve Now</a>
         </div>
       `;
-
-      out += cardHtml;
-      allCards.push({ html: cardHtml, search: `${id} ${material} ${color} ${length} ${width} ${area}`.toLowerCase() });
+      out += card;
+      allCards.push({html:card, search:`${id} ${material} ${color} ${length} ${width} ${area}`.toLowerCase()});
     });
-
-    document.getElementById('grid').innerHTML = out || '<p class="empty">No remnants available at this time.</p>';
+    document.getElementById('grid').innerHTML = out || '<p class="empty">No remnants available.</p>';
   })
-  .catch(err => {
-    console.error('Error loading CSV:', err);
+  .catch(e=>{
+    console.error(e);
     document.getElementById('grid').innerHTML = '<p class="empty" style="color:red;">Error loading inventory.</p>';
   });
 
-// Search
-function filterCards() {
-  const query = document.getElementById('search').value.toLowerCase();
-  const grid = document.getElementById('grid');
-  let filtered = '';
-
-  allCards.forEach(card => {
-    if (card.search.includes(query)) filtered += card.html;
-  });
-
-  grid.innerHTML = filtered || '<p class="empty">No results found.</p>';
+function filterCards(){
+  const q=document.getElementById('search').value.toLowerCase();
+  const grid=document.getElementById('grid');
+  let filtered='';
+  allCards.forEach(c=>{ if(c.search.includes(q)) filtered+=c.html });
+  grid.innerHTML=filtered||'<p class="empty">No results found.</p>';
 }
-
-// Lightbox
-function openLightbox(url) {
-  const lightbox = document.getElementById('lightbox');
-  const img = document.getElementById('lightbox-img');
-  img.src = url;
-  lightbox.classList.add('active');
-}
-document.getElementById('lightbox').addEventListener('click', () => {
-  document.getElementById('lightbox').classList.remove('active');
-});
-
-// Auto-refresh every 3 min
-setInterval(() => location.reload(), 180000);
 </script>
-
 </body>
 </html>
