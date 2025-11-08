@@ -1,3 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Prime Countertops - Remnant Live Inventory</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600" rel="stylesheet">
+  <style>
+    /* Base Styles */
+    body { font-family:'Inter',system-ui,sans-serif; background:#f8f9fa; margin:0; color:#1a1a1a; }
+    
+    /* Header Styles */
+    header { background:#000; color:#ffd700; padding:32px 20px; text-align:center; }
+    header h1 { margin:0; font-size:28px; }
+    /* Adjusted: Header paragraph color to white */
+    header p { margin-top:8px; font-size:16px; opacity:1; color: #fff; } 
+
+    /* Layout & Search */
+    .container { max-width:1200px; margin:auto; padding:20px; }
+    .search-container { text-align:center; margin-bottom:20px; }
+    .search-input { padding:12px; width:100%; max-width:400px; border:1px solid #ccc; border-radius:8px; }
+    .remnant-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:24px; }
+    
+    /* Card Styles */
+    .card { background:#fff; border-radius:16px; box-shadow:0 4px 12px rgba(0,0,0,0.08); overflow:hidden; text-align:center; transition:transform 0.2s; }
+    .card:hover { transform:translateY(-4px); }
+    /* Adjusted: Added pointer for clickable image */
+    .card img { width:100%; height:180px; object-fit:cover; cursor: pointer; } 
+    .info { padding:12px; font-size:14px; }
+    .info b { font-size:16px; display:block; margin-bottom:4px; }
+    .card a { display:block; margin:12px; padding:10px; background:#000; color:#ffd700; border-radius:8px; text-decoration:none; font-weight:600; }
+    .card a:hover { background:#333; }
+    .empty { text-align:center; color:#666; font-size:18px; padding:40px; grid-column:1/-1; }
+    .footer { text-align:center; background:#000; color:#fff; padding:24px; }
+    .footer a { color:#ffd700; text-decoration:none; }
+
+    /* --- NEW LIGHTBOX/MODAL STYLES --- */
+    .modal {
+      display: none; 
+      position: fixed;
+      z-index: 1000; 
+      padding-top: 60px; 
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.9);
+    }
+    .modal-content {
+      margin: auto;
+      display: block;
+      width: 80%;
+      max-width: 90vw; 
+      max-height: 90vh; 
+      object-fit: contain; 
+    }
+    .modal-content, .caption {
+      animation-name: zoom;
+      animation-duration: 0.6s;
+    }
+    @keyframes zoom {
+      from {transform:scale(0.1)} 
+      to {transform:scale(1)}
+    }
+    /* The Close Button */
+    .close {
+      position: absolute;
+      top: 15px;
+      right: 35px;
+      color: #f1f1f1;
+      font-size: 40px;
+      font-weight: bold;
+      transition: 0.3s;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Prime Countertops</h1>
+  <p>Remnant Live Inventory</p>
+</header>
+
+<div class="container">
+  <div class="search-container">
+    <input id="search" class="search-input" type="text" placeholder="Search by ID, color, or material..." onkeyup="filterCards()">
+  </div>
+  <div id="grid" class="remnant-grid">
+    <p class="empty">Loading inventory...</p>
+  </div>
+</div>
+
+<div class="footer">
+  <p>Questions? Email <a href="mailto:sales@primecountertops.net">sales@primecountertops.net</a> or call (240) 887-0036</p>
+</div>
+
+<div id="imageModal" class="modal">
+  <span class="close" onclick="closeModal()">&times;</span>
+  <img class="modal-content" id="img01">
+</div>
+
 <script>
 // Live CSV from Google Sheet
 const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRnGELVHvjmo6XT1JI2wlruG_kkliJ6942oyAtkFbJYYAZagAh6Cw3-sxDMqfVj-7LaYiDTOQhExE7u/pub?gid=0&single=true&output=csv";
@@ -23,19 +126,24 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// --- Data Fetching and Card Generation ---
+// --- Data Fetching and Card Generation (Fixing the Promise Rejection Error) ---
 fetch(csvUrl)
-  .then(res => res.text())
+  .then(res => {
+    // ⚠️ CORREÇÃO: Verificação se a resposta foi bem-sucedida (status 200)
+    if (!res.ok) {
+        // Se falhar (ex: 404 ou 403), lança um erro para o bloco .catch
+        throw new Error(`Failed to load CSV. Status: ${res.status} (${res.statusText}).`);
+    }
+    return res.text();
+  })
   .then(csv => {
+    // Se o CSV for carregado com sucesso, o processamento continua aqui.
     const rows = csv.split(/\r?\n/).map(r => r.split(','));
     let html = '';
     rows.slice(1).forEach(row => {
-      // **ADJUSTED:** Check for a minimum of 9 columns (A-I)
+      // Check for a minimum of 9 columns (A-I)
       if (row.length < 9) return; 
 
-      // -------------------------------------------------------------
-      // ⚠️ UPDATED COLUMN MAPPING (Drive link [I] removed, Image File moves to [I])
-      // -------------------------------------------------------------
       const [
         id,          // Column A (Index 0)
         material,    // Column B (Index 1)
@@ -45,7 +153,7 @@ fetch(csvUrl)
         width,       // Column F (Index 5)
         area,        // Column G (Index 6)
         status,      // Column H (Index 7)
-        imageFile,   // Column I (Index 8) <-- NEW POSITION
+        imageFile,   // Column I (Index 8)
       ] = row.map(x => x.trim());
 
       if (status.toLowerCase() !== 'available') return;
@@ -75,8 +183,9 @@ fetch(csvUrl)
     document.getElementById('grid').innerHTML = html || '<p class="empty">No remnants available.</p>';
   })
   .catch(err => {
-    console.error(err);
-    document.getElementById('grid').innerHTML = '<p class="empty" style="color:red;">Error loading inventory.</p>';
+    // ⚠️ CORREÇÃO: Bloco de tratamento de erro que será chamado se houver falha de rede ou 404/403.
+    console.error("Erro ao carregar o inventário:", err);
+    document.getElementById('grid').innerHTML = `<p class="empty" style="color:red;">Error loading inventory. ❌ ${err.message || 'Check CSV URL/Permissions.'}</p>`;
   });
 
 function filterCards() {
@@ -86,3 +195,6 @@ function filterCards() {
   grid.innerHTML = filtered || '<p class="empty">No results found.</p>';
 }
 </script>
+
+</body>
+</html>
